@@ -1,8 +1,10 @@
 pub mod cryptograph {
-    use rand;
+    use rand::Rng;
+    use std::io::prelude::*;
     use std::{
-        fs::{File, read_to_string},
-        path::Path};
+        fs::{read_to_string, File},
+        path::Path,
+    };
 
     pub fn cryptograph(
         path_to_file_to_encrypt: &Path,
@@ -11,19 +13,18 @@ pub mod cryptograph {
         shift: (usize, usize),
         encrypted_new_line_length: (usize, usize),
     ) {
-        
         // IMPORTANT: Investigate topic of functions allocation, traits and functions borrowing.
         // INITIALLY PROVIDED BY: https://github.com/alexschrod (ilyvion on Discord).
-        let perform_to_lower: &dyn Fn(&str) -> String = if to_lower {
-            &|word: &str| word.to_lowercase()
+        let perform_to_lower: fn(&str) -> String = if to_lower {
+            |word: &str| word.to_lowercase()
         } else {
-            &|word: &str| word.to_string()
+            |word: &str| word.to_string()
         };
-        
-        let perform_rm_punctuation: &dyn Fn(String) -> String = if rm_punctuation {
-            &cleared
+
+        let perform_rm_punctuation: fn(String) -> String = if rm_punctuation {
+            cleared
         } else {
-            &|word: String| word.to_string()
+            |word: String| word.to_string()
         };
 
         let origin_lines: Vec<Vec<String>> = read_to_string(&path_to_file_to_encrypt)
@@ -38,11 +39,17 @@ pub mod cryptograph {
             })
             .collect();
 
-        let encrypted: File = get_file_bound_to(&path_to_file_to_encrypt, "encrypted-");
-        let decryptor: File = get_file_bound_to(&path_to_file_to_encrypt, "decryptor-for-");
+        let mut encrypted: File = get_file_bound_to(&path_to_file_to_encrypt, "encrypted-");
+        let mut decryptor: File = get_file_bound_to(&path_to_file_to_encrypt, "decryptor-for-");
 
         for line in origin_lines.iter() {
-            encrypt_line(line, &encrypted, &decryptor, &shift, &encrypted_new_line_length);
+            encrypt_line(
+                line,
+                &mut encrypted,
+                &mut decryptor,
+                &shift,
+                &encrypted_new_line_length,
+            );
         }
     }
 
@@ -69,8 +76,8 @@ pub mod cryptograph {
 
     fn encrypt_line(
         line: &Vec<String>,
-        encrypted: &File,
-        decryptor: &File,
+        encrypted: &mut File,
+        decryptor: &mut File,
         shift: &(usize, usize),
         encrypted_new_line_length: &(usize, usize),
     ) {
@@ -83,11 +90,26 @@ pub mod cryptograph {
 
     fn encrypt_word(
         word: &str,
-        encrypted: &File,
-        decryptor: &File,
+        encrypted: &mut File,
+        decryptor: &mut File,
         shift: &(usize, usize),
     ) {
-        // Encrypt `word` using the `rand` crate.
+        let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
+
+        for byte in word.as_bytes() {
+            let (key, action) = (rng.gen_range(shift.0..shift.1) as isize, rng.gen_bool(0.5));
+            write!(decryptor, "{}", key.to_string()).unwrap();
+
+            // TODO: Add 'action-words' written into `encrypted`.
+            if action {
+                write!(encrypted, "{}", (*byte as isize + key).to_string()).unwrap();
+            } else {
+                write!(encrypted, "{}", (*byte as isize - key).to_string()).unwrap();
+            }
+        }
+
+        write!(encrypted, "\n").unwrap();
+        write!(decryptor, "\n").unwrap();
     }
 
     fn get_encrypted_new_line(
