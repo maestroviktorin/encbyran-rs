@@ -7,11 +7,16 @@ pub mod actions {
     const ASCII_LETTERS: &str = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
 
     pub fn get_action_sets(set_size: usize, word_size: usize) -> (ActionSet, ActionSet, ActionSet) {
-        let action_plus: ActionSet = get_random_set(set_size, word_size);
-        let action_minus: ActionSet = get_random_set(set_size, word_size);
-        let action_new_line: ActionSet = get_random_set(set_size, word_size);
+        let mut action_plus: ActionSet = get_random_set(set_size, word_size);
+        let mut action_minus: ActionSet = get_random_set(set_size, word_size);
+        let mut action_new_line: ActionSet = get_random_set(set_size, word_size);
 
-        // TODO: Implement the difference of each set with two others.
+        // Solution obtained from https://stackoverflow.com/questions/76860337/compound-hashset-operations-in-rust
+        (action_plus, action_minus, action_new_line) = (
+            &(&action_plus - &action_minus) - &action_new_line,
+            &(&action_minus - &action_plus) - &action_new_line,
+            &(&action_new_line - &action_plus) - &action_minus,
+        );
 
         (action_plus, action_minus, action_new_line)
     }
