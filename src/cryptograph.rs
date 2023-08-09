@@ -5,12 +5,16 @@ use std::{
     path::Path,
 };
 
+use super::actions::ActionVecs;
+
 pub fn cryptograph(
     path_to_file_to_encrypt: &Path,
     to_lower: bool,
     rm_punctuation: bool,
     shift: (usize, usize),
     encrypted_new_line_length: (usize, usize),
+    approximate_action_set_size: usize,
+    action_word_max_size: usize,
 ) {
     // IMPORTANT: Investigate topic of functions allocation, traits and functions borrowing.
     // INITIALLY PROVIDED BY: https://github.com/alexschrod (ilyvion on Discord).
@@ -41,6 +45,10 @@ pub fn cryptograph(
     let mut encrypted: File = get_file_bound_to(&path_to_file_to_encrypt, "encrypted-");
     let mut decryptor: File = get_file_bound_to(&path_to_file_to_encrypt, "decryptor-for-");
 
+    let action_vecs: ActionVecs =
+        ActionVecs::new(approximate_action_set_size, action_word_max_size);
+    action_vecs.write_all_to(&mut decryptor);
+
     for line in origin_lines.iter() {
         encrypt_line(
             line,
@@ -48,6 +56,7 @@ pub fn cryptograph(
             &mut decryptor,
             &shift,
             &encrypted_new_line_length,
+            &action_vecs,
         );
     }
 }
@@ -79,26 +88,47 @@ fn encrypt_line(
     decryptor: &mut File,
     shift: &(usize, usize),
     encrypted_new_line_length: &(usize, usize),
+    action_vecs: &ActionVecs,
 ) {
     for word in line {
-        encrypt_word(word, encrypted, decryptor, shift);
+        encrypt_word(word, encrypted, decryptor, shift, action_vecs);
     }
 
-    // Encrypt the new line notation using `encrypted_new_line_length`.
+    let encrypted_new_line: String =
+        get_encrypted_new_line(encrypted_new_line_length, shift, action_vecs);
+    write!(encrypted, "{}\n", encrypted_new_line).unwrap();
+    write!(decryptor, "0\n").unwrap();
 }
 
-fn encrypt_word(word: &str, encrypted: &mut File, decryptor: &mut File, shift: &(usize, usize)) {
+fn encrypt_word(
+    word: &str,
+    encrypted: &mut File,
+    decryptor: &mut File,
+    shift: &(usize, usize),
+    action_vecs: &ActionVecs,
+) {
     let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
 
     for byte in word.as_bytes() {
         let (key, action) = (rng.gen_range(shift.0..shift.1) as isize, rng.gen_bool(0.5));
-        write!(decryptor, "{}", key.to_string()).unwrap();
+        write!(decryptor, "{} ", key.to_string()).unwrap();
 
-        // TODO: Add 'action-words' written into `encrypted`.
         if action {
-            write!(encrypted, "{}", (*byte as isize + key).to_string()).unwrap();
+            write!(
+                encrypted,
+                "{}{} ",
+                action_vecs.get_random_plus(),
+                (*byte as isize + key).to_string()
+            )
+            .unwrap();
         } else {
-            write!(encrypted, "{}", (*byte as isize - key).to_string()).unwrap();
+            write!(
+                encrypted,
+                "{}{} ",
+                action_vecs.get_random_minus(),
+                (*byte as isize - key).to_string()
+            )
+            .unwrap();
         }
     }
 
@@ -109,14 +139,39 @@ fn encrypt_word(word: &str, encrypted: &mut File, decryptor: &mut File, shift: &
 fn get_encrypted_new_line(
     encrypted_new_line_length: &(usize, usize),
     shift: &(usize, usize),
+    action_vecs: &ActionVecs,
 ) -> String {
     // Build an encrypted newline by joining some 'units'.
-    String::from("")
+    let mut result: Vec<String> = Vec::new();
+    let finite_encrypted_new_line_length: usize =
+        rand::thread_rng().gen_range(encrypted_new_line_length.0..encrypted_new_line_length.1);
+
+    for _ in 0..finite_encrypted_new_line_length {
+        result.push(get_encrypted_new_line_unit(shift, action_vecs));
+    }
+
+    result.join(" ")
 }
 
-fn get_encrypted_new_line_unit(shift: &(usize, usize)) -> String {
+fn get_encrypted_new_line_unit(shift: &(usize, usize), action_vecs: &ActionVecs) -> String {
     // Produce a unit of an encrypted new line.
-    String::from("")
+    let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
+    let mut shift_: isize = rng.gen_range(shift.0..shift.1) as isize;
+    shift_ = if rng.gen_bool(0.5) { shift_ } else { -shift_ };
+
+    let new_line_notation: String = action_vecs.get_random_new_line().clone();
+    let phantom_number = new_line_notation
+        .chars()
+        .nth(rng.gen_range(0..new_line_notation.len()))
+        .unwrap()
+        .to_string()
+        .as_bytes()
+        .get(0)
+        .unwrap()
+        .clone() as isize
+        + shift_;
+
+    format!("{}{}", new_line_notation, phantom_number)
 }
 
 #[cfg(test)]
