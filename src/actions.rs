@@ -1,5 +1,5 @@
 use rand::seq::SliceRandom;
-use std::{collections::HashSet, fs::File,io::Write};
+use std::{collections::HashSet, fs, io::Write, path::Path};
 
 pub struct ActionVecs {
     pub plus: Vec<String>,
@@ -45,10 +45,19 @@ impl ActionVecs {
         self.new_line.choose(&mut rng).unwrap()
     }
 
-    pub fn write_all_to(&self, to: &mut File) {
+    pub fn write_to(&self, to: &mut fs::File) {
         write!(to, "{:?}\n", self.plus).unwrap();
         write!(to, "{:?}\n", self.minus).unwrap();
-        write!(to, "{:?}\n", self.new_line).unwrap();
+    }
+
+    pub fn read_from(from: &Path) -> Self {
+        let source = fs::read_to_string(from).unwrap();
+
+        Self {
+            plus: obtain_action_vec(&source, 0),
+            minus: obtain_action_vec(&source, 1),
+            new_line: vec![],
+        }
     }
 }
 
@@ -82,4 +91,15 @@ fn get_random_word(action_word_max_size: usize) -> String {
     }
 
     result
+}
+
+fn obtain_action_vec(source: &String, line_number: usize) -> Vec<String> {
+    source
+        .lines()
+        .nth(line_number)
+        .unwrap()
+        .trim_matches(|chr: char| !chr.is_alphanumeric())
+        .split(", ")
+        .map(|action_word| String::from(action_word.trim_matches('"')))
+        .collect()
 }

@@ -1,3 +1,5 @@
+use super::utils::get_file_bound_to;
+
 use rand::Rng;
 use std::io::prelude::*;
 use std::{
@@ -47,7 +49,7 @@ pub fn cryptograph(
 
     let action_vecs: ActionVecs =
         ActionVecs::new(approximate_action_set_size, action_word_max_size);
-    action_vecs.write_all_to(&mut decryptor);
+    action_vecs.write_to(&mut decryptor);
 
     for line in origin_lines.iter() {
         encrypt_line(
@@ -62,24 +64,14 @@ pub fn cryptograph(
 }
 
 fn cleared(word: String) -> String {
-    let mut result: String = String::from(&word);
-    let mut n: usize = word.len() - 1;
-
-    while word.chars().nth(n).unwrap().is_ascii_punctuation() {
-        result.remove(n);
-        n -= 1;
-    }
-
-    result
-}
-
-fn get_file_bound_to(bound_to: &Path, beginning_name: &str) -> File {
-    File::create(format!(
-        "{beginning_name}{:?}{:?}",
-        bound_to.file_stem().unwrap().to_str(),
-        bound_to.extension().unwrap().to_str()
-    ))
-    .unwrap()
+    /*
+    Possible improvement:
+        Add configurability of leaving non-alphanumerical characters located amidst the `word`,
+        so that "sea-buckthorn!" turns into "sea-buckthorn", but not into "seabuckthorn".
+    */
+    word.chars()
+        .filter(|chr: &char| chr.is_alphanumeric())
+        .collect()
 }
 
 fn encrypt_line(
@@ -113,6 +105,8 @@ fn encrypt_word(
         let (key, action) = (rng.gen_range(shift.0..shift.1) as isize, rng.gen_bool(0.5));
         write!(decryptor, "{} ", key.to_string()).unwrap();
 
+        // Possible improvement:
+        //  Reduce this `if-else` block using `EncryptedByte` struct.
         if action {
             write!(
                 encrypted,
