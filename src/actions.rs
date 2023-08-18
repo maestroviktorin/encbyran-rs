@@ -15,7 +15,7 @@ impl ActionVecs {
         let mut new_line: ActionSet =
             get_random_set(approximate_action_set_size, action_word_max_size);
 
-        // Solution obtained from
+        // Solution is obtained from
         // https://stackoverflow.com/questions/76860337/compound-hashset-operations-in-rust-or-how-to-get-an-explicit-difference-union
         plus.retain(|word: &String| minus.remove(word) | new_line.remove(word) | true);
         minus.retain(|word: &String| new_line.remove(word) | true);

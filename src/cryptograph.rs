@@ -1,4 +1,4 @@
-use super::utils::get_file_bound_to;
+use super::utils::{get_file_bound_to, EncryptedByte};
 
 use rand::Rng;
 use std::io::prelude::*;
@@ -14,22 +14,22 @@ pub fn cryptograph(
     to_lower: bool,
     rm_punctuation: bool,
     shift: (usize, usize),
-    encrypted_new_line_length: (usize, usize),
+    encrypted_new_line_length_range: (usize, usize),
     approximate_action_set_size: usize,
     action_word_max_size: usize,
 ) {
     // IMPORTANT: Investigate topic of functions allocation, traits and functions borrowing.
     // INITIALLY PROVIDED BY: https://github.com/alexschrod (ilyvion on Discord).
-    let perform_to_lower: fn(&str) -> String = if to_lower {
-        |word: &str| word.to_lowercase()
+    let perform_to_lower: &dyn Fn(&str) -> String = if to_lower {
+        &|word: &str| word.to_lowercase()
     } else {
-        |word: &str| word.to_string()
+        &|word: &str| word.to_string()
     };
 
-    let perform_rm_punctuation: fn(String) -> String = if rm_punctuation {
-        cleared
+    let perform_rm_punctuation: &dyn Fn(String) -> String = if rm_punctuation {
+        &cleared
     } else {
-        |word: String| word.to_string()
+        &|word: String| word.to_string()
     };
 
     let origin_lines: Vec<Vec<String>> = read_to_string(&path_to_file_to_encrypt)
@@ -47,8 +47,7 @@ pub fn cryptograph(
     let mut encrypted: File = get_file_bound_to(&path_to_file_to_encrypt, "encrypted-");
     let mut decryptor: File = get_file_bound_to(&path_to_file_to_encrypt, "decryptor-for-");
 
-    let action_vecs: ActionVecs =
-        ActionVecs::new(approximate_action_set_size, action_word_max_size);
+    let action_vecs = ActionVecs::new(approximate_action_set_size, action_word_max_size);
     action_vecs.write_to(&mut decryptor);
 
     for line in origin_lines.iter() {
@@ -57,7 +56,7 @@ pub fn cryptograph(
             &mut encrypted,
             &mut decryptor,
             &shift,
-            &encrypted_new_line_length,
+            &encrypted_new_line_length_range,
             &action_vecs,
         );
     }
@@ -79,7 +78,7 @@ fn encrypt_line(
     encrypted: &mut File,
     decryptor: &mut File,
     shift: &(usize, usize),
-    encrypted_new_line_length: &(usize, usize),
+    encrypted_new_line_length_range: &(usize, usize),
     action_vecs: &ActionVecs,
 ) {
     for word in line {
@@ -87,7 +86,7 @@ fn encrypt_line(
     }
 
     let encrypted_new_line: String =
-        get_encrypted_new_line(encrypted_new_line_length, shift, action_vecs);
+        get_encrypted_new_line(encrypted_new_line_length_range, shift, action_vecs);
     write!(encrypted, "{}\n", encrypted_new_line).unwrap();
     write!(decryptor, "0\n").unwrap();
 }
@@ -99,31 +98,29 @@ fn encrypt_word(
     shift: &(usize, usize),
     action_vecs: &ActionVecs,
 ) {
-    let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
+    let mut rng = rand::thread_rng();
 
     for byte in word.as_bytes() {
         let (key, action) = (rng.gen_range(shift.0..shift.1) as isize, rng.gen_bool(0.5));
-        write!(decryptor, "{} ", key.to_string()).unwrap();
+        write!(decryptor, "{} ", key).unwrap();
 
-        // Possible improvement:
-        //  Reduce this `if-else` block using `EncryptedByte` struct.
+        // The '_' at the beginning is to omit the fact
+        // that `_encrypted_byte` is never used before its reassignment in the next `if-else` block.
+        let mut _encrypted_byte = EncryptedByte::empty();
+
         if action {
-            write!(
-                encrypted,
-                "{}{} ",
-                action_vecs.get_random_plus(),
-                (*byte as isize + key).to_string()
-            )
-            .unwrap();
+            _encrypted_byte = EncryptedByte::filled(
+                action_vecs.get_random_plus().to_owned(),
+                *byte as isize + key,
+            );
         } else {
-            write!(
-                encrypted,
-                "{}{} ",
-                action_vecs.get_random_minus(),
-                (*byte as isize - key).to_string()
-            )
-            .unwrap();
+            _encrypted_byte = EncryptedByte::filled(
+                action_vecs.get_random_minus().to_owned(),
+                *byte as isize - key,
+            );
         }
+
+        write!(encrypted, "{}", _encrypted_byte).unwrap();
     }
 
     write!(encrypted, "\n").unwrap();
@@ -131,14 +128,14 @@ fn encrypt_word(
 }
 
 fn get_encrypted_new_line(
-    encrypted_new_line_length: &(usize, usize),
+    encrypted_new_line_length_range: &(usize, usize),
     shift: &(usize, usize),
     action_vecs: &ActionVecs,
 ) -> String {
     // Build an encrypted newline by joining some 'units'.
     let mut result: Vec<String> = Vec::new();
-    let finite_encrypted_new_line_length: usize =
-        rand::thread_rng().gen_range(encrypted_new_line_length.0..encrypted_new_line_length.1);
+    let finite_encrypted_new_line_length: usize = rand::thread_rng()
+        .gen_range(encrypted_new_line_length_range.0..encrypted_new_line_length_range.1);
 
     for _ in 0..finite_encrypted_new_line_length {
         result.push(get_encrypted_new_line_unit(shift, action_vecs));
@@ -149,12 +146,12 @@ fn get_encrypted_new_line(
 
 fn get_encrypted_new_line_unit(shift: &(usize, usize), action_vecs: &ActionVecs) -> String {
     // Produce a unit of an encrypted new line.
-    let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
+    let mut rng = rand::thread_rng();
     let mut shift_: isize = rng.gen_range(shift.0..shift.1) as isize;
     shift_ = if rng.gen_bool(0.5) { shift_ } else { -shift_ };
 
-    let new_line_notation: String = action_vecs.get_random_new_line().clone();
-    let phantom_number = new_line_notation
+    let new_line_notation = action_vecs.get_random_new_line().clone();
+    let phantom_number: isize = new_line_notation
         .chars()
         .nth(rng.gen_range(0..new_line_notation.len()))
         .unwrap()

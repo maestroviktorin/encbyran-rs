@@ -6,8 +6,6 @@ META TODO:
    * Rewrite https://github.com/maestroviktorin/encbyran-py in Rust.
 
 TODO:
-   * Extract `EncryptedByte` from `decryptograph.rs` to `utils.rs` and implement its usage in `cryptograph.rs` as well.
-
    * Fix names of files created during execution of the program,
      so that `decryptor-for-Some("sample").txt` became `decryptor-for-sample.txt`.
 
@@ -25,7 +23,7 @@ fn main() {
     cryptograph::cryptograph(
         Path::new("./sample.txt"),
         false,
-        true,
+        false,
         (1, 200),
         (1, 15),
         10,
