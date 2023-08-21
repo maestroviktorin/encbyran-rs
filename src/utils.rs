@@ -37,10 +37,47 @@ impl Display for EncryptedByte {
     }
 }
 
+#[derive(Clone)]
+pub struct UsizeRangeTupleContainer(pub (usize, usize));
+
+impl ToString for UsizeRangeTupleContainer {
+    fn to_string(&self) -> String {
+        format!("({}, {})", self.0 .0, self.0 .1)
+    }
+}
+
+// FIXME.
 pub fn get_file_bound_to(bound_to: &Path, beginning_name: &str) -> File {
     File::create(format!(
         "{beginning_name}{:?}.txt",
         bound_to.file_stem().unwrap().to_str(),
     ))
     .unwrap()
+}
+
+pub fn range_parser(lower_and_upper: &str) -> Result<UsizeRangeTupleContainer, String> {
+    let lower_and_upper: Vec<usize> = lower_and_upper
+        .split(',')
+        .map(|num| {
+            num.parse()
+                .expect("`--...-range` must be of the form: <lower bound>,<upper bound>.")
+        })
+        .collect();
+
+    let (lower, upper) = (
+        lower_and_upper.get(0).unwrap().to_owned(),
+        lower_and_upper.get(1).unwrap().to_owned(),
+    );
+
+    if lower < upper {
+        Ok(UsizeRangeTupleContainer((lower, upper)))
+    } else {
+        Err(format!(
+            "<lower bound> (You provided: {lower}) must be lower than <upper bound> ({upper}).
+You provided:
+<lower bound>: {}
+<upper bound>: {}",
+            lower, upper
+        ))
+    }
 }

@@ -9,3 +9,11 @@ edition = "2021"
 rand = "0.8.4"
 clap = { version = "4.3.19", features = ["derive"] }
 regex = "1.9.1"
+
+[lib]
+name = "encbyran"
+path = "./src/lib.rs"
+
+[[bin]]
+name = "encbyran"
+path = "./src/main.rs"

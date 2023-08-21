@@ -7,6 +7,24 @@ use std::{fs, io::Write, path::Path};
 
 use regex::Regex;
 
+/// Decrypts the Encrypted File encrypted by [`cryptograph`](super::cryptograph::cryptograph) using Decryptor.
+///
+/// ### Parameters
+///
+/// `path_to_file_to_decrypt`: Location of the Encrypted File to be decrypted.
+///
+/// `path_to_decryptor`: Location of Decryptor to the Encrypted File.
+///
+/// ### Examples
+///
+/// ```rust
+/// use std::path::Path;
+///
+/// decryptograph(
+///     Path::new("./encrypted-password.txt"), // This file was produced by the `cryptograph`. Now it will be decrypted.
+///     Path::new("./decryptor-for-password.txt") // This file was produced by the `cryptograph`. Now it will be used to decrypt the Encrypted File passed above.
+/// )
+/// ```
 pub fn decryptograph(path_to_file_to_decrypt: &Path, path_to_decryptor: &Path) {
     // Regular expressions that are used to parse Encrypted File.
     let re_action_word = Regex::new(r"[a-zA-Z]+").unwrap();
@@ -49,8 +67,8 @@ pub fn decryptograph(path_to_file_to_decrypt: &Path, path_to_decryptor: &Path) {
 
     let mut decrypted = get_file_bound_to(&path_to_file_to_decrypt, "decrypted-");
     for word_i in 0..keys.len() {
-        // While in Encrypted File each new line is just meaningless set of pseudo encrypted bytes,
-        // in Decryptor each new line is just `0`.
+        // While in Encrypted File each new line is just a meaningless set of pseudo encrypted bytes,
+        // in Decryptor each new line is clear `0`.
         if keys[word_i][0] == 0 {
             write!(decrypted, "\n").unwrap();
             continue;
