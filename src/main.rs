@@ -1,11 +1,5 @@
 /*
 Work in Progress.
-
-TODO:
-    * Fix names of files created during execution of the program,
-      so that `decryptor-for-Some("sample").txt` became `decryptor-for-sample.txt`.
-
-    * Simplify and solidify encrypting of '\n'.
 */
 use std::path::Path;
 

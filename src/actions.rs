@@ -4,7 +4,6 @@ use std::{collections::HashSet, fs, io::Write, path::Path};
 pub struct ActionVecs {
     pub plus: Vec<String>,
     pub minus: Vec<String>,
-    pub new_line: Vec<String>,
 }
 
 impl ActionVecs {
@@ -23,26 +22,19 @@ impl ActionVecs {
         Self {
             plus: Vec::from_iter(plus.into_iter()),
             minus: Vec::from_iter(minus.into_iter()),
-            new_line: Vec::from_iter(new_line.into_iter()),
         }
     }
 
-    pub fn get_random_plus(&self) -> &String {
+    pub fn get_random_plus(&self) -> String {
         let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
 
-        self.plus.choose(&mut rng).unwrap()
+        self.plus.choose(&mut rng).unwrap().clone()
     }
 
-    pub fn get_random_minus(&self) -> &String {
+    pub fn get_random_minus(&self) -> String {
         let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
 
-        self.minus.choose(&mut rng).unwrap()
-    }
-
-    pub fn get_random_new_line(&self) -> &String {
-        let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
-
-        self.new_line.choose(&mut rng).unwrap()
+        self.minus.choose(&mut rng).unwrap().clone()
     }
 
     pub fn write_to(&self, to: &mut fs::File) {
@@ -56,7 +48,6 @@ impl ActionVecs {
         Self {
             plus: obtain_action_vec(&source, 0),
             minus: obtain_action_vec(&source, 1),
-            new_line: vec![],
         }
     }
 }

@@ -48,11 +48,15 @@ impl ToString for UsizeRangeTupleContainer {
 
 // FIXME.
 pub fn get_file_bound_to(bound_to: &Path, beginning_name: &str) -> File {
-    File::create(format!(
-        "{beginning_name}{:?}.txt",
-        bound_to.file_stem().unwrap().to_str(),
-    ))
-    .unwrap()
+    if let Some(file_stem) = bound_to.file_stem() {
+        File::create(format!(
+            "{beginning_name}{}.txt",
+            file_stem.to_str().unwrap(),
+        ))
+        .unwrap()
+    } else {
+        File::create("foo.txt").unwrap()
+    }
 }
 
 pub fn range_parser(lower_and_upper: &str) -> Result<UsizeRangeTupleContainer, String> {

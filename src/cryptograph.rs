@@ -274,7 +274,7 @@ fn get_encrypted_new_line_unit(shift_range: &(usize, usize), action_vecs: &Actio
     let mut shift_: isize = rng.gen_range(shift_range.0..shift_range.1) as isize;
     shift_ = if rng.gen_bool(0.5) { shift_ } else { -shift_ };
 
-    let new_line_notation = action_vecs.get_random_new_line().clone();
+    let new_line_notation = if shift_ > 0 {action_vecs.get_random_plus()} else {action_vecs.get_random_minus()};
     let phantom_number: isize = new_line_notation
         .chars()
         .nth(rng.gen_range(0..new_line_notation.len()))
