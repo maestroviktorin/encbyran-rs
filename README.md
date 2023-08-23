@@ -24,14 +24,17 @@ The program reads the words from an *Original File* and represents each byte in 
 Let's break down what is what.
 
 **`<randomly generated action word>`**
+
 The program randomly generates two collections of `Action Word`s - `plus` and `minus` (their size can be configured by `--approximate-action-set-size` parameter). When encrypting a byte, either to add or to subtraction the byte value is decided and based on this decision a random `Action Word` is chosen from the corresponding collection. Both collections are written to `Decryptor` after generation.
 Size of  so-called `plus` and `minus` can be configured by specifying `--approximate-action-set-size` parameter of the `encrypt` command.
 
 **`<randomly shifted byte value>`**
+
 When an action (addition or subtraction) is chosen, the byte value is changed by randomly generated number.
 The range which magnitude is within can be configured by specifying `--shift-range` parameter of the `encrypt` command.
 
 **`<magnitude of byte value shift>`**
+
 In order for an *Encrypted File* to be decrypted in the future magnitude of each shifted byte value is written into *Decryptor*. Each `0` in *Decryptor* corresponds to `'\n'` in the *Original File*.
 
 Now let's simulate a real usage.
@@ -102,3 +105,6 @@ Thanks to [The Rust Programming Language Discord Server Community](https://disco
 ## License
 
 [GNU General Public License v3.0 only (GPL-3.0-only)](LICENSE.md)
+
+---
+If you have any ideas on how to make this tool better be sure to write [me](https://www.github.com/maestroviktorin).
